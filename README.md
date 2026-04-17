@@ -11,6 +11,14 @@ The guidelines are distilled into four core principles:
 
 ---
 
+## Inspiration & Attribution
+
+EigenAgent is inspired by and based on **[andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)** by [@forrestchang](https://github.com/forrestchang), which itself is derived from [Andrej Karpathy's observations](https://x.com/karpathy/status/2015883857489522876) on LLM coding pitfalls. The four core principles in EigenAgent directly correspond to those introduced in that project.
+
+This project is licensed under the [MIT License](LICENSE), in alignment with the original project's open-source license.
+
+---
+
 ## Remote Initialization for Coding Agents
 
 This repository is designed to be loaded by any AI coding agent to bootstrap a productive, well-behaved working mode.
@@ -50,6 +58,7 @@ Read the file in full. It contains:
 - **Eigen.md** — four core coding principles with rationale.
 - **Example.md** — concrete before/after code examples for each principle.
 - **Principles.md** — a quick-reference table of do's and don'ts.
+- **Plan.md** — collaborative planning protocol (activated by `@plan`).
 - **Init.md** — workspace initialization protocol (run when the user types `init`).
 
 #### Step 3 — Apply the principles
@@ -59,9 +68,33 @@ From this point forward, apply the guidelines from the loaded file to all coding
 #### Step 4 — Initialize the workspace (optional)
 
 If the user types `init`, follow the **Init.md** protocol in the loaded file:
+- Write all document content into `.agent/` folder as long-term memory.
 - Scan the project root for language, package manager, and framework markers.
 - Generate a `.agent/AGENT.md` tailored to the detected stack.
-- Write long-term memory files into `.agent/`.
+
+---
+
+## Agent Usage Guide
+
+Once the agent file is loaded, the following commands are available:
+
+| Command | Description |
+|---------|-------------|
+| `init` | **Initialize workspace** — writes all Eigen guidelines into `.agent/` as long-term memory, scans the project, and generates `.agent/AGENT.md` tailored to your tech stack. |
+| `@plan` | **Start collaborative planning** — activates the planning agent mode. The agent will research your codebase, clarify requirements with you, and produce a detailed, executable plan *before* writing any code. The agent will not implement until you approve the plan. |
+
+### Example interactions
+
+```
+# Initialize the workspace for a new project
+init
+
+# Plan a feature before implementation
+@plan Add user authentication with JWT tokens
+
+# Regular coding task (no special command needed)
+Fix the null pointer exception in the login controller
+```
 
 ---
 
@@ -70,6 +103,7 @@ If the user types `init`, follow the **Init.md** protocol in the loaded file:
 ```
 EigenAgent/
 ├── README.md              ← You are here. Start here for agent guidance.
+├── LICENSE                ← MIT License
 └── agents/
     ├── Eigen_zh.agent.md  ← 中文 (Chinese)
     ├── Eigen_en.agent.md  ← English
@@ -93,4 +127,4 @@ To add a new language translation:
 
 ## License
 
-This project is released into the public domain. Use, adapt, and redistribute freely.
+This project is licensed under the [MIT License](LICENSE). See the [LICENSE](LICENSE) file for details.
