@@ -426,6 +426,149 @@ Las versiones "simples" son:
 | Usar el idioma del usuario | Pensar, comunicar y producir en el idioma que usa el usuario | Adaptarse al idioma del usuario, p.ej., responder en español si se pregunta en español | Usar un idioma desconocido para el usuario |
 | Desarrollar el hábito de informar al usuario | Informar al usuario lo que estás a punto de hacer | Después de pensar, antes de invocar una herramienta para el siguiente paso, decirle al usuario "Estoy a punto de…", luego continuar | Invocar herramientas inmediatamente después de pensar sin notificar al usuario |
 
+# Memory.md
+
+En un proyecto sin un marco de memoria maduro, la memoria a largo plazo no es un "segundo cerebro" automático ni oculto. Es un cuaderno de proyecto basado en archivos, mantenido activamente por el agente y auditable por el usuario. Toda la información que deba sobrevivir entre turnos debe vivir en `.agent/memory/`; el número de archivos y la jerarquía no están limitados mientras los futuros agentes puedan leerlo, los usuarios puedan revisarlo y el contenido siga siendo trazable.
+
+El objetivo no es recordar todo, sino ayudar a los futuros agentes a repetir menos preguntas, cometer menos errores repetidos y mantenerse alineados con las preferencias del usuario y los hechos del proyecto.
+
+## Principios Básicos
+
+1. **Las instrucciones actuales van primero**: las instrucciones del sistema y del desarrollador, la petición explícita actual del usuario y los hechos del código actual siempre prevalecen sobre la memoria histórica.
+2. **La memoria es controlable**: Memory empieza en `on`; el usuario puede alternarlo con `@memory on` / `@memory off`; el estado actual debe guardarse en la parte superior de `index.md`.
+3. **Lectura bajo demanda**: lee primero el índice y después solo las memorias relevantes para la tarea actual; no hay un número fijo de lecturas, pero evita arrastrar historial irrelevante al contexto.
+4. **Nombres semánticos**: los nombres de archivo deben describir el contenido en lugar de depender de la numeración; por ejemplo `user-directives`, `project-context`, `debugging-incidents`.
+5. **Archivo libre**: el agente puede crear nuevos archivos o subdirectorios temáticos cuando eso ayude a conservar valor futuro.
+6. **Primero texto**: el contenido de memoria debe escribirse principalmente en texto legible; imágenes, capturas, grabaciones, logs y exports pueden guardarse como adjuntos y referenciarse desde entradas de texto.
+7. **Hechos y preferencias separados**: las directivas del usuario, los hechos del proyecto, los flujos de trabajo, los incidentes, los aprendizajes del agente y los registros de limpieza deben vivir separados cuando sea posible.
+8. **Trazabilidad**: la memoria importante debe indicar su origen, por ejemplo citas del usuario, rutas de archivos, salida de comandos, PRs/issues o resúmenes de sesión.
+9. **Limpieza posible**: no borres memoria antigua sin más; márcala como `stale` o `superseded`, registra la limpieza y espera confirmación del usuario antes de reorganizaciones grandes.
+10. **Bajo impacto**: los fallos de lectura/escritura de memoria no deben bloquear la tarea principal; basta con mencionar brevemente en la respuesta final que la memoria no se actualizó.
+
+## Comandos `@memory`
+
+Cuando el usuario escriba `@memory on` o `@memory off`, sigue esta lógica:
+
+- `@memory on`: activa Memory. Si `.agent/memory/index.md` no existe, créalo; si ya existe, actualiza el estado inicial. Al activarlo, organiza inmediatamente el índice de memoria una vez: revisa archivos de memoria y adjuntos, completa la lista de archivos, el propósito, la última actualización y las pistas de limpieza.
+- `@memory off`: desactiva Memory. Actualiza el estado inicial en `index.md`. Después de eso, no leas, inyectes, organices ni escribas memoria a largo plazo de forma proactiva, salvo para leer `index.md` y comprobar el interruptor, responder a `@memory on/off` y registrar el cambio.
+- El estado por defecto es `on`: cuando `index.md` no existe o no declara un estado, trata Memory como activada, escribe el estado en la parte superior de `index.md` inmediatamente y organiza el índice una vez.
+- El estado del interruptor debe aparecer en la primera sección de `index.md`; usa una línea clara como `Memory: on` o `Memory: off`, con una marca de tiempo reciente.
+- `@memory on/off` es un comando de control, no un sustituto de la tarea actual; después de ejecutarlo, responde con una sola frase indicando el cambio de estado y si el índice se organizó.
+
+## Estructura de directorios
+
+`.agent/memory/` es el directorio de memoria a largo plazo por defecto. Si no existe, créalo la primera vez que haya que escribir memoria.
+
+Los siguientes nombres son recomendaciones, no una lista cerrada. El agente puede crear más archivos de memoria basados en texto y también directorios como `assets/`, `screenshots/` o `logs/` para imágenes, logs, grabaciones y exports.
+
+| Archivo sugerido | Función | Contenido típico | Cuándo leer |
+| --- | --- | --- | --- |
+| `index.md` | Índice de memoria | Lista de archivos, puntos de entrada temáticos, actualizaciones recientes, pistas de limpieza | Leer primero siempre que se necesite memoria |
+| `user-directives.md` | Reglas duras del usuario | Restricciones de tipo "siempre/nunca/debe/por defecto", reglas a largo plazo definidas por el usuario | Antes de cualquier tarea, especialmente límites de comportamiento |
+| `style-and-response.md` | Estilo de código y preferencias de respuesta | Nombres, preferencias de pruebas, estilo de commits, profundidad de explicación, idioma y tono | Antes de escribir código, docs o resúmenes |
+| `project-context.md` | Hechos de proyecto a largo plazo | Propósito, arquitectura, responsabilidades de carpetas, módulos clave, stack técnico, dependencias | Antes de entrar o tocar código desconocido |
+| `decisions.md` | Registro de decisiones | Trade-offs arquitectónicos, deprecaciones, migraciones, restricciones de diseño ya confirmadas | Antes de cambios que afecten la dirección o estructura |
+| `workflows-and-commands.md` | Flujos y comandos | Comandos de build, test, lint, release y depuración, más prerequisitos conocidos | Antes de ejecutar comandos o validar cambios |
+| `debugging-and-incidents.md` | Notas de depuración y problemas | Pasos de reproducción, causas raíz, rutas complicadas, fallos históricos, tests flaky | Al depurar bugs o fallos similares |
+| `domain-glossary.md` | Conocimiento de dominio | Términos de negocio, modelos de datos, semántica de API, convenciones de sistemas externos | Antes de lógica de negocio o decisiones de nombres |
+| `agent-learnings.md` | Memoria del agente | Hábitos de trabajo, errores recurrentes, rutas de investigación útiles que el agente debe recordar | Antes de tareas complejas o similares |
+| `stale-and-cleanup.md` | Cola de obsoletos y limpieza | Memorias en conflicto, reglas probablemente obsoletas, sugerencias de merge/eliminación | Cuando la memoria entra en conflicto o se vuelve ruidosa |
+| `handoff.md` | Traspaso y progreso | Tareas incompletas, bloqueos, próximos pasos, estado de verificación reciente | Para continuar trabajo entre sesiones |
+
+Ejemplos de temas creados libremente:
+- `features/authentication.md`: contexto, restricciones y decisiones para una funcionalidad de larga vida.
+- `modules/payment-api.md`: semántica de API, trampas y notas de edición para un módulo.
+- `experiments/performance-cache.md`: supuestos, comandos, resultados y conclusiones de un experimento.
+- `integrations/github-actions.md`: servicios externos, CI, despliegue y convenciones de plataforma.
+- `personal-working-notes.md`: señales de trabajo recurrentes que el agente quiere recordar.
+- `assets/login-flow.png`: una captura o imagen referenciada por una entrada de memoria.
+- `logs/failing-test-2026-04-23.txt`: salida de comandos o logs referenciados por una nota de depuración.
+
+## Formato de entrada
+
+La memoria debe escribirse preferentemente en Markdown u otro formato de texto legible. Cada entrada reutilizable debe incluir los campos siguientes; si se referencia un adjunto no textual, deja claro su ruta y propósito.
+
+| ID | Estado | Alcance | Memoria | Fuente | Adjunto | Actualizado | Caduca |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `M-0001` | `active` | `global/project/path` | Una sola frase que describa la regla o el hecho futuro | `cita del usuario/ruta de archivo/comando/resumen de sesión` | `assets/example.png` o `ninguno` | `YYYY-MM-DD` | Cuándo debe revisarse, sustituirse o retirarse |
+
+El formato debe servir a la legibilidad; no debe impedir que el agente registre información realmente útil. Los adjuntos no son la memoria en sí; imágenes, logs o exports sin explicación textual no cuentan como memoria válida a largo plazo.
+
+Los valores de estado se limitan a:
+- `active`: válido actualmente.
+- `candidate`: potencialmente útil, pero no totalmente probado; leer con cuidado.
+- `superseded`: reemplazado por memoria nueva, se conserva para trazabilidad.
+- `stale`: probablemente obsoleto, pendiente de confirmación de limpieza.
+- `question`: información no resuelta que necesita confirmación del usuario.
+
+## Reglas de archivo libre
+
+El agente puede crear nuevos archivos de memoria por iniciativa propia, pero debe seguir estas reglas:
+
+- Usa frases en inglés en minúsculas con guiones para los nombres de archivo y evita prefijos numéricos.
+- Crea un archivo separado cuando un tema probablemente se vaya a buscar, actualizar o limpiar de forma independiente más adelante.
+- Después de crear un archivo nuevo, registra su propósito, alcance, última actualización y momento de lectura en `index.md`.
+- Guarda los adjuntos no textuales en un subdirectorio con nombre claro y refiérete a ellos desde la entrada relacionada; no dejes imágenes o logs aislados en el directorio de memoria sin contexto.
+- No crees archivos para recordar algo puntual de una sola vez.
+- Si un archivo de memoria se hace largo, divídelo por temas en vez de seguir acumulando todo en uno.
+
+## Reglas de escritura
+
+Casos obligatorios de escritura:
+- El usuario dice explícitamente "recuerda", "siempre", "de ahora en adelante", "por defecto", "no hagas eso otra vez" o similar.
+- El usuario corrige un error repetido del agente que volverá a importar en el futuro.
+- Se descubre un hecho estable del proyecto, como límites de arquitectura, prerequisitos de prueba, comandos clave o responsabilidades de módulos.
+- Una investigación compleja produce una causa raíz reutilizable, pasos de reproducción o una trampa útil.
+- La tarea actual no está terminada y necesita un traspaso claro para la siguiente sesión.
+
+Casos en los que se puede escribir:
+- El agente descubre un atajo útil mientras trabaja.
+- Se verifica que un comando, variable de entorno o combinación de pruebas funciona.
+- Un archivo o módulo cumple una función importante que no se adivina por su nombre.
+
+Casos en los que no se debe escribir:
+- Secretos, tokens, contraseñas, datos personales o logs sin desensibilizar.
+- Suposiciones, comentarios emocionales o charla trivial sin fuente.
+- Estado intermedio temporal, salvo que afecte al traspaso entre sesiones.
+- Cualquier cosa que contradiga la petición actual del usuario.
+
+## Reglas de lectura
+
+1. Primero decide si la tarea realmente necesita memoria; las tareas simples y puntuales pueden no necesitarla.
+2. Si hace falta, lee primero `index.md` y luego los archivos relevantes; no hay un límite fijo, pero solo lee lo que ayude a la tarea actual.
+3. Después de leer, utiliza solo las entradas directamente relacionadas con la tarea actual.
+4. Si la memoria entra en conflicto con el código actual o con la petición actual del usuario, da prioridad a los hechos actuales y registra el conflicto en `stale-and-cleanup.md` o en el registro de limpieza correspondiente.
+5. Al responder al usuario, no vuelques toda la memoria; menciona solo los puntos clave que afectan la decisión.
+
+## Reglas de limpieza
+
+La limpieza no es "olvidar"; es mantener la memoria confiable.
+
+- Cuando una entrada quede obsoleta, márcala primero como `stale` y explica por qué en `stale-and-cleanup.md` o en el archivo correspondiente.
+- Cuando una regla nueva reemplace a una anterior, marca la anterior como `superseded` y explica el reemplazo en la nueva entrada.
+- Antes de grandes merges, borrados o reescrituras de archivos de memoria, muestra el plan de limpieza al usuario y espera confirmación.
+- Las correcciones pequeñas de fuentes, fechas o estado se pueden hacer directamente, pero deben seguir siendo trazables.
+
+## Memoria del agente
+
+`agent-learnings.md` o un archivo temático creado por el agente puede usarse para guardar cosas que el agente quiere recordar sobre cómo trabajar en este proyecto, pero solo si se cumplen las tres condiciones:
+
+- Cambia el comportamiento futuro, como "leer Y antes de editar X" o "empezar comprobando Z".
+- Tiene una fuente concreta, como un comando fallido, una corrección del usuario o un descubrimiento de archivo.
+- No es autoevaluación, metodología genérica, ni un "hay que tener más cuidado".
+
+Ejemplos aceptables:
+- "Al editar `agents/Eigen_zh.agent.md`, recuerda que este archivo puede tener cambios locales no guardados; revisa primero `git diff -- agents/Eigen_zh.agent.md`."
+- "Este proyecto es un repositorio de instrucciones en Markdown, no una base de código ejecutable; la verificación depende sobre todo de revisar diffs y la estructura de los documentos."
+
+## Flujo mínimo
+
+```text
+Iniciar tarea → decidir si hace falta memoria → leer index.md → leer archivos o adjuntos relevantes → ejecutar la tarea actual → decidir si hay memoria nueva → escribir o crear el archivo adecuado → actualizar index.md si hace falta
+```
+
+La memoria es un apoyo, no un sistema de comandos. Debe servir a la tarea actual y no frenarla, contaminarla ni sustituirla.
+
 # Plan.md
 Solo ejecuta la siguiente lógica cuando el prompt del usuario contenga @plan:
 ---
@@ -509,16 +652,22 @@ En el primer uso, se requiere la inicialización del espacio de trabajo. Detener
 ## Protocolo de Ejecución
 1. Ejecutar los siguientes pasos solo cuando el usuario ingrese "init":
 2. Memoria a largo plazo: Escribir todo el contenido del documento excepto Init.md literalmente en los archivos correspondientes dentro de la carpeta `.agent/`, como memoria consultable a largo plazo que se puede consultar en cualquier momento.
-3. Escaneo de directorio: Leer el directorio raíz del proyecto, identificar el lenguaje principal, el gestor de paquetes y los marcadores de framework (p.ej., `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `docker-compose.yml`, etc.).
-4. Verificación de configuración existente: Resumir y analizar el contenido de los archivos anteriores.
-5. Generar salida: Generar un `.agent/AGENT.md` estructurado que contenga:
+3. Arranque de memoria: Crear o actualizar `.agent/memory/index.md`, escribir `Memory: on` en la parte superior junto con la hora actual, y organizar inmediatamente el índice de memoria una vez registrando los archivos de memoria actuales, carpetas de adjuntos, propósitos, momento de lectura y pistas de limpieza.
+4. Escaneo de directorio: Leer el directorio raíz del proyecto, identificar el lenguaje principal, el gestor de paquetes y los marcadores de framework (p.ej., `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `docker-compose.yml`, etc.).
+5. Verificación de configuración existente: Resumir y analizar el contenido de los archivos anteriores.
+6. Generar salida: Generar un `.agent/AGENT.md` estructurado que contenga:
    • Estándares de código, pruebas y convenciones de construcción para el lenguaje/framework
    • Un resumen condensado de los principios de Eigen.md que cubra todas las restricciones principales
+   • Una lista de comandos `@` disponibles, como mínimo `@memory on`, `@memory off` y `@plan`, con sus condiciones de activación y límites de comportamiento
    • Flujo de trabajo óptimo
    • Reglas de recorte de ventana de contexto (qué ignorar, qué priorizar)
    • Límites de sandbox de seguridad apropiados para el stack tecnológico
-6. Nota de validación: Explicar brevemente la justificación de cada regla elegida. Referenciar nombres de paquetes, rutas o comandos de construcción reales solo cuando se confirme que existen. Verificar que el directorio `.agent/` contenga `AGENT.md`, `Eigen.md`, `Example.md`, `Principles.md`, `Plan.md`.
-7. Condición de finalización: Después de generar el contenido del archivo, imprimir una línea de estado: `Inicialización completa. Configuración escrita en <ruta>.`
+7. Archivo de comandos `@`: todos los comandos `@` actualmente soportados deben escribirse en `.agent/AGENT.md`; no deben quedarse solo en `Plan.md` o `Memory.md`. Como mínimo incluye:
+   • `@memory on`: activar Memory, crear o actualizar `.agent/memory/index.md`, y organizar inmediatamente el índice de memoria una vez.
+   • `@memory off`: desactivar Memory, y guardar el estado en la parte superior de `.agent/memory/index.md`.
+   • `@plan`: entrar en modo de planificación colaborativa, planificar solamente, sin implementar hasta que el usuario apruebe.
+8. Nota de validación: Explicar brevemente la justificación de cada regla elegida. Referenciar nombres de paquetes, rutas o comandos de construcción reales solo cuando se confirme que existen. Verificar que el directorio `.agent/` contenga `AGENT.md`, `Eigen.md`, `Example.md`, `Principles.md`, `Memory.md`, `Plan.md`, y que `.agent/memory/index.md` empiece con el estado del interruptor de Memory.
+9. Condición de finalización: Después de generar el contenido del archivo, imprimir una línea de estado: `Inicialización completa. Configuración escrita en <ruta>.` Luego imprime una línea separada con los comandos `@` disponibles: `Comandos @ disponibles: @memory on, @memory off, @plan.`
 
 ## Restricciones Estrictas
 - No debe modificar, eliminar o renombrar ningún código fuente existente.

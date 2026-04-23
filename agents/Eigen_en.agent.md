@@ -627,6 +627,149 @@ The "simple" versions are:
 | Use the user's language | Think, communicate, and output in the language the user uses | Adapt to the user's language, e.g., respond in Chinese if asked in Chinese | Use a language unfamiliar to the user |
 | Develop the habit of reporting to the user | Inform the user what you are about to do | After thinking, before invoking a tool for the next step, tell the user "I am about to…", then proceed | Immediately invoke tools after thinking without notifying the user |
 
+# Memory.md
+
+In a project without a mature memory framework, long-term memory is not an automatic hidden "second brain". It is a file-based project notebook actively maintained by the agent and auditable by the user. All cross-turn information should live under `.agent/memory/`; file count and hierarchy are not hard-limited as long as future agents can read it, users can review it, and the content remains traceable.
+
+The goal is not to remember everything; it is to help future agents ask fewer repeated questions, avoid repeating mistakes, and stay consistent with user preferences and project facts.
+
+## Core Principles
+
+1. **Current instructions first**: system and developer instructions, the user's current explicit request, and the current code facts always outrank historical memory.
+2. **Memory is controllable**: Memory defaults to `on`; the user can toggle it with `@memory on` / `@memory off`; the current state must be stored at the top of `index.md`.
+3. **Read on demand**: read the index first, then only the memory entries relevant to the current task; there is no fixed read count, but avoid pulling unrelated history into context.
+4. **Semantic names**: file names should describe content instead of relying on numeric ordering; for example `user-directives`, `project-context`, `debugging-incidents`.
+5. **Free-form filing**: the agent can create new topic files or subdirectories when that helps preserve future value.
+6. **Text-first index**: memory content should primarily be written in readable text; images, screenshots, recordings, logs, and export files can be stored as attachments and referenced from text entries.
+7. **Facts and preferences stay separate**: user directives, project facts, workflows, incident notes, agent learnings, and cleanup records should live in different places when possible.
+8. **Traceability**: important memory must show its source, such as user quotes, file paths, command output, PRs/issues, or session summaries.
+9. **Cleanability**: do not delete old memory outright; mark it as `stale` or `superseded`, record the cleanup, and wait for user confirmation before large reorganizations.
+10. **Low interference**: memory read/write failures must not block the main task; just note briefly in the final reply that memory was not updated.
+
+## `@memory` Commands
+
+When the user enters `@memory on` or `@memory off`, follow this control logic:
+
+- `@memory on`: enable Memory. If `.agent/memory/index.md` does not exist, create it; if it already exists, update the opening status. When turning it on, immediately organize the memory index once: inspect existing memory files and attachments, fill in the file list, purpose, last updated time, and cleanup hints.
+- `@memory off`: disable Memory. Update the opening status in `index.md`. After that, do not proactively read, inject, organize, or write other long-term memory, except for reading `index.md` to check the toggle, responding to `@memory on/off`, and recording the toggle change.
+- Default state is `on`: when `index.md` does not exist or does not declare a state, treat Memory as enabled, immediately write the state to the top of `index.md`, and immediately organize the memory index once.
+- The toggle state must appear in the first section of `index.md`; use a clear line such as `Memory: on` or `Memory: off`, plus a recent timestamp.
+- `@memory on/off` is a control command, not a replacement for the current task; after execution, respond with one short sentence describing the state change and whether the index was organized.
+
+## Directory Layout
+
+`.agent/memory/` is the default long-term memory directory. If it does not exist, create it the first time memory needs to be written.
+
+The following file names are recommendations, not a closed list. The agent may create more text-based memory files, and may also create `assets/`, `screenshots/`, or `logs/` directories for images, logs, recordings, and exports.
+
+| Suggested file | Purpose | Typical content | When to read |
+| --- | --- | --- | --- |
+| `index.md` | Memory index | File list, topic entry points, recent updates, cleanup hints | Read first whenever memory is needed |
+| `user-directives.md` | User hard rules | "always/never/must/default" style constraints, user-defined long-term rules | Before any task, especially behavior boundaries |
+| `style-and-response.md` | Coding style and response preferences | Naming, testing preferences, commit style, explanation depth, language and tone preferences | Before writing code, docs, or summaries |
+| `project-context.md` | Long-term project facts | Project purpose, architecture, folder responsibilities, key modules, tech stack, dependencies | Before entering or changing unfamiliar code |
+| `decisions.md` | Long-term decision log | Confirmed architectural tradeoffs, deprecations, migration plans, design constraints | Before changes that affect direction or structure |
+| `workflows-and-commands.md` | Workflows and commands | Build, test, lint, release, and debug commands, plus known prerequisites | Before running commands or validating changes |
+| `debugging-and-incidents.md` | Debugging notes and pitfalls | Reproduction steps, root causes, tricky paths, historical failures, flaky tests | When debugging similar bugs or failed tests |
+| `domain-glossary.md` | Domain knowledge | Business terms, data models, API semantics, external system conventions | Before business logic or naming decisions |
+| `agent-learnings.md` | Agent self-memory | Work habits, recurring mistakes, useful investigation paths the agent should remember | Before complex or similar future tasks |
+| `stale-and-cleanup.md` | Stale items and cleanup queue | Conflicting memories, likely obsolete rules, suggested merges/deletions | When memory conflicts, grows stale, or gets noisy |
+| `handoff.md` | Handoff and progress | Unfinished tasks, blockers, next steps, recent verification status | When continuing work across sessions |
+
+Examples of freely created topics:
+- `features/authentication.md`: context, constraints, and decisions for a long-lived feature.
+- `modules/payment-api.md`: API semantics, pitfalls, and editing notes for a module.
+- `experiments/performance-cache.md`: assumptions, commands, results, and conclusions from an experiment.
+- `integrations/github-actions.md`: external services, CI, deployment, and platform conventions.
+- `personal-working-notes.md`: recurring work cues the agent wants to remember.
+- `assets/login-flow.png`: a screenshot or image referenced by a memory entry.
+- `logs/failing-test-2026-04-23.txt`: command output or logs referenced by a debugging note.
+
+## Memory Entry Format
+
+Memory content should preferably use Markdown or another readable text format. Each reusable memory entry should include the fields below; if you reference a non-text attachment, make the attachment path and purpose explicit in the entry.
+
+| ID | Status | Scope | Memory | Source | Attachment | Updated | Expiry |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `M-0001` | `active` | `global/project/path` | A single sentence describing the future rule or fact | `user quote/file path/command/session summary` | `assets/example.png` or `none` | `YYYY-MM-DD` | When this should be reviewed, replaced, or retired |
+
+The format serves readability; it should not prevent the agent from recording genuinely useful information. Attachments are not the memory itself; image, log, or export files without text explanation should not count as valid long-term memory.
+
+Status values are limited to:
+- `active`: currently valid.
+- `candidate`: potentially useful, but not fully proven; read carefully.
+- `superseded`: replaced by newer memory, kept for traceability.
+- `stale`: likely outdated, waiting for cleanup confirmation.
+- `question`: unresolved information that needs user confirmation.
+
+## Free Filing Rules
+
+The agent may create new memory files on its own, but must follow these constraints:
+
+- Use lowercase English phrases with hyphens for file names, and avoid numeric prefixes.
+- Create a separate file when a topic will likely be searched, updated, or cleaned up independently later.
+- After creating a new memory file, register its purpose, scope, last update time, and read timing in `index.md`.
+- Store non-text attachments in a clearly named subdirectory, and reference them from the related memory entry; do not dump isolated images or logs into the memory directory without context.
+- Do not create a file just to remember something one-off.
+- If a memory file becomes long, split it by topic instead of keeping everything in one place.
+
+## Write Rules
+
+Must-write cases:
+- The user explicitly says "remember", "always", "from now on", "default", "don't do that again", or similar.
+- The user corrects a repeated agent mistake that will matter again later.
+- A stable project fact is discovered, such as architecture boundaries, test prerequisites, key commands, or module responsibilities.
+- A complex investigation produces reusable root cause, reproduction steps, or a useful pitfall.
+- The current task is unfinished and needs a clear handoff for the next session.
+
+Can-write cases:
+- The agent discovers a future time-saver while working.
+- A command, environment variable, or test combination is verified to work.
+- A file or module has an important role that is not obvious from its name.
+
+Do-not-write cases:
+- Secrets, tokens, passwords, personal data, or unredacted logs.
+- Guesswork, emotional comments, or one-off chit-chat without source.
+- Temporary intermediate state, unless it affects cross-session handoff.
+- Anything that conflicts with the user's current request.
+
+## Read Rules
+
+1. First decide whether the task actually needs memory; simple one-off tasks may not.
+2. If needed, read `index.md` first, then pick the relevant files; there is no hard read limit, but only read what helps the current task.
+3. After reading, only pull in entries directly related to the current task.
+4. If memory conflicts with current code or the user's current request, trust the current facts and record the conflict in `stale-and-cleanup.md` or the relevant cleanup record.
+5. When replying to the user, do not dump the full memory; only mention the key points that affect the decision.
+
+## Cleanup Rules
+
+Cleanup is not forgetting; it is keeping memory trustworthy.
+
+- When a memory entry is outdated, mark it `stale` first and record why in `stale-and-cleanup.md` or the corresponding file.
+- When a newer rule replaces an older one, mark the old entry `superseded` and explain the replacement in the new entry.
+- Before large merges, deletions, or rewrites of memory files, show the cleanup plan to the user and wait for confirmation.
+- Small corrections to sources, dates, or status can be made directly, but they must remain traceable.
+
+## Agent Self-Memory
+
+`agent-learnings.md` or a self-created topic memory file can be used to store things the agent wants to remember about how to work in this project, but only if all three conditions hold:
+
+- It changes future behavior, such as "read Y before editing X" or "start by checking Z".
+- It has a concrete source, such as a failed command, user correction, or file discovery.
+- It is not self-evaluation, generic methodology, or "be more careful" style wording.
+
+Acceptable examples:
+- "When editing `agents/Eigen_zh.agent.md`, remember this file may contain unsaved local changes; check `git diff -- agents/Eigen_zh.agent.md` first."
+- "This project is a Markdown instruction repo, not a runnable codebase; verification mainly relies on diff review and document structure checks."
+
+## Minimal Workflow
+
+```text
+Start task → decide whether memory is needed → read index.md → read relevant memory files or attachments → do the current task → decide whether new memory should be written → write or create the right memory file → update index.md if needed
+```
+
+Memory is an aid, not a command system. It must serve the current task and must not slow it down, pollute it, or replace it.
+
 # Plan.md
 Only execute the following logic when the user's prompt contains @plan:
 ---
@@ -710,16 +853,22 @@ On first use, workspace initialization is required. Halt all general coding task
 ## Execution Protocol
 1. Execute the following steps only when the user enters "init":
 2. Long-term memory: Write all document content except Init.md verbatim into corresponding files inside the `.agent/` folder, as long-term queryable memory that can be consulted at any time.
-3. Directory scan: Read the project root directory, identify the primary language, package manager, and framework markers (e.g., `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `docker-compose.yml`, etc.).
-4. Existing config check: Summarize and analyze the contents of the above files.
-5. Generate output: Output a structured `.agent/AGENT.md` containing:
+3. Memory bootstrap: Create or update `.agent/memory/index.md`, write `Memory: on` at the top together with the last update time, and immediately organize the memory index once by recording existing memory files, attachment folders, purposes, read timing, and cleanup hints.
+4. Directory scan: Read the project root directory, identify the primary language, package manager, and framework markers (e.g., `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `docker-compose.yml`, etc.).
+5. Existing config check: Summarize and analyze the contents of the above files.
+6. Generate output: Output a structured `.agent/AGENT.md` containing:
    • Code standards, testing, and build conventions for the language/framework
    • A condensed summary of Eigen.md principles that covers all core constraints
+   • A list of available `@` commands, at minimum `@memory on`, `@memory off`, and `@plan`, with their trigger conditions and behavior boundaries
    • Optimal workflow
    • Context window trimming rules (what to ignore, what to prioritize)
    • Security sandbox boundaries appropriate for the tech stack
-6. Validation note: Briefly explain the rationale for each chosen rule. Reference real package names, paths, or build commands only when confirmed to exist. Verify that the `.agent/` directory contains `AGENT.md`, `Eigen.md`, `Example.md`, `Principles.md`, `Plan.md`.
-7. End condition: After outputting the file contents, print a single status line: `Initialization complete. Configuration written to <path>.`
+7. Archive `@` commands: all currently supported `@` commands must be written into `.agent/AGENT.md`; do not leave them only in `Plan.md` or `Memory.md`. At minimum include:
+   • `@memory on`: enable Memory, create or update `.agent/memory/index.md`, and immediately organize the memory index once.
+   • `@memory off`: disable Memory, and store the state at the top of `.agent/memory/index.md`.
+   • `@plan`: enter collaborative planning mode, plan only, do not implement until the user approves.
+8. Validation note: Briefly explain the rationale for each chosen rule. Reference real package names, paths, or build commands only when confirmed to exist. Verify that the `.agent/` directory contains `AGENT.md`, `Eigen.md`, `Example.md`, `Principles.md`, `Memory.md`, `Plan.md`, and that `.agent/memory/index.md` starts with the Memory toggle state.
+9. End condition: After outputting the file contents, print a single status line: `Initialization complete. Configuration written to <path>.` Then print a separate line listing the available `@` commands: `Available @ commands: @memory on, @memory off, @plan.`
 
 ## Strict Constraints
 - Must not modify, delete, or rename any existing source code.
