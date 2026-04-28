@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-split_by_h1.py — 按一级标题（# Title）切分 Markdown 文件
+fast_paste.py — 按一级标题（# Title）切分 Markdown 文件
 
 用法：
-    python split_by_h1.py <输入文件路径（相对于本脚本的路径）>
+    python fast_paste.py <输入文件路径（相对于本脚本的路径）>
 
 示例：
-    python split_by_h1.py ../agents/Eigen_zh.agent.md
+    python fast_paste.py ../agents/Eigen_zh.agent.md
 
 输出：
     在输入文件所在目录下，创建一个与输入文件同名（无后缀）的子目录，
@@ -31,7 +31,7 @@ def sanitize_filename(name: str) -> str:
     return name or '_untitled'
 
 
-def split_by_h1(input_relative_path: str) -> None:
+def fast_paste(input_relative_path: str) -> None:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     abs_input = os.path.normpath(os.path.join(script_dir, input_relative_path))
 
@@ -91,8 +91,8 @@ def split_by_h1(input_relative_path: str) -> None:
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print('用法：python split_by_h1.py <输入文件路径（相对于本脚本）>')
-        print('示例：python split_by_h1.py ../agents/Eigen_zh.agent.md')
+        print('用法：python fast_paste.py <输入文件路径（相对于本脚本）>')
+        print('示例：python fast_paste.py ../agents/Eigen_zh.agent.md')
         sys.exit(1)
 
-    split_by_h1(sys.argv[1])
+    fast_paste(sys.argv[1])

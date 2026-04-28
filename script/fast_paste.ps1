@@ -1,8 +1,8 @@
-# split_by_h1.ps1 — 按一级标题（# Title）切分 Markdown 文件（PowerShell 版）
+# fast_paste.ps1 — 按一级标题（# Title）切分 Markdown 文件（PowerShell 版）
 #
 # 用法：
-#   .\split_by_h1.ps1 -InputPath <输入文件路径（相对于本脚本的路径）>
-#   .\split_by_h1.ps1 ..\agents\Eigen_zh.agent.md
+#   .\fast_paste.ps1 -InputPath <输入文件路径（相对于本脚本的路径）>
+#   .\fast_paste.ps1 ..\agents\Eigen_zh.agent.md
 #
 # 编码：UTF-8（BOM-less）
 # 兼容：PowerShell 5.1+ / PowerShell 7+
