@@ -106,13 +106,23 @@ Fix the null pointer exception in the login controller
 EigenAgent/
 ├── README.md              ← You are here. Start here for agent guidance.
 ├── LICENSE                ← MIT License
-└── agents/
-    ├── Eigen_zh.agent.md  ← 中文 (Chinese)
-    ├── Eigen_en.agent.md  ← English
-    ├── Eigen_es.agent.md  ← Español (Spanish)
-    ├── Eigen_fr.agent.md  ← Français (French)
-    ├── Eigen_ru.agent.md  ← Русский (Russian)
-    └── Eigen_ar.agent.md  ← العربية (Arabic)
+├── agents/
+│   ├── Eigen_zh.agent.md  ← 中文 (Chinese)
+│   ├── Eigen_en.agent.md  ← English
+│   ├── Eigen_es.agent.md  ← Español (Spanish)
+│   ├── Eigen_fr.agent.md  ← Français (French)
+│   ├── Eigen_ru.agent.md  ← Русский (Russian)
+│   └── Eigen_ar.agent.md  ← العربية (Arabic)
+├── script/                ← One-click split scripts (reduce init token cost)
+│   ├── README.md          ← Usage guide
+│   ├── split_by_h1.py     ← Python (recommended, cross-platform)
+│   ├── split_by_h1.sh     ← Bash (Linux / Git Bash)
+│   ├── split_by_h1.ps1    ← PowerShell (Windows)
+│   └── split_by_h1_mac.sh ← zsh (macOS native)
+└── character/             ← Response style presets for AI models
+    ├── README.md          ← Usage guide
+    ├── claude_style.md    ← Anthropic Claude style
+    └── gpt_style.md       ← OpenAI ChatGPT / GPT-4 style
 ```
 
 ---
