@@ -69,7 +69,7 @@ def split_by_h1(input_relative_path: str) -> None:
         filename = sanitize_filename(title_text)
 
         # 若标题本身不含扩展名，则补充 .md
-        if '.' not in os.path.splitext(filename)[1]:
+        if os.path.splitext(filename)[1] == '':
             filename = filename + '.md'
 
         # 防止同名冲突：加上序号前缀
